@@ -65,7 +65,7 @@ export function createEngine(options: EngineOptions = {}): Engine {
 
   /* ── registry check, shared between concurrent callers for the same domain ── */
 
-  const pendingVerdicts = new Map<string, Promise<RegistryVerdict>>();
+  const pendingVerdicts = new Map<string, { verdict: Promise<RegistryVerdict>; signal?: AbortSignal }>();
 
   async function askRegistry(domain: string, signal?: AbortSignal): Promise<RegistryVerdict> {
     const tld = tldOf(domain);
@@ -86,17 +86,32 @@ export function createEngine(options: EngineOptions = {}): Engine {
     return { status: await whois.check(tld, domain), source: "whois" };
   }
 
-  function askRegistryOnce(domain: string, signal?: AbortSignal): Promise<RegistryVerdict> {
+  /**
+   * Concurrent callers for the same domain share one registry request. The request runs
+   * with the first caller's signal, so if that caller aborts, a caller that is still
+   * waiting starts its own request instead of inheriting the aborted "unknown".
+   */
+  async function askRegistryOnce(domain: string, signal?: AbortSignal): Promise<RegistryVerdict> {
     const pending = pendingVerdicts.get(domain);
 
     if (pending) {
-      return pending;
+      const verdict = await pending.verdict;
+
+      if (verdict.status !== "unknown" || !pending.signal?.aborted || signal?.aborted) {
+        return verdict;
+      }
     }
 
-    const verdict = askRegistry(domain, signal).finally(() => pendingVerdicts.delete(domain));
-    pendingVerdicts.set(domain, verdict);
+    const entry = { verdict: askRegistry(domain, signal), signal };
+    pendingVerdicts.set(domain, entry);
 
-    return verdict;
+    try {
+      return await entry.verdict;
+    } finally {
+      if (pendingVerdicts.get(domain) === entry) {
+        pendingVerdicts.delete(domain);
+      }
+    }
   }
 
   /* ── one uncached lookup: DNS, then the registry ── */
@@ -169,8 +184,16 @@ export function createEngine(options: EngineOptions = {}): Engine {
     return result;
   }
 
-  function stream(domains: string[], opts: CheckOptions = {}): AsyncIterable<DomainResult> {
-    return callbackToAsyncIterable<DomainResult>((push) => checkMany(domains, push, opts));
+  /** Stops the remaining lookups when the consumer leaves the loop early (break, throw). */
+  async function* stream(domains: string[], opts: CheckOptions = {}): AsyncIterable<DomainResult> {
+    const stop = new AbortController();
+    const signal = opts.signal ? AbortSignal.any([opts.signal, stop.signal]) : stop.signal;
+
+    try {
+      yield* callbackToAsyncIterable<DomainResult>((push) => checkMany(domains, push, { signal }));
+    } finally {
+      stop.abort();
+    }
   }
 
   return {

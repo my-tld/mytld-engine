@@ -1,6 +1,6 @@
 {
   "name": "@mytld/engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Fast, honest domain availability checks for Node.js: parallel DNS, then RDAP and WHOIS. Only reports \"available\" when a registry confirms it.",
   "keywords": [
     "domain",
