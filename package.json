@@ -1,0 +1,75 @@
+{
+  "name": "@mytld/engine",
+  "version": "1.0.0",
+  "description": "Fast, honest domain availability checks for Node.js: parallel DNS, then RDAP and WHOIS. Only reports \"available\" when a registry confirms it.",
+  "keywords": [
+    "domain",
+    "availability",
+    "whois",
+    "rdap",
+    "dns",
+    "tld",
+    "domain-checker",
+    "registrar",
+    "rdap-client",
+    "whois-client",
+    "domain-availability"
+  ],
+  "homepage": "https://mytld.dev",
+  "bugs": {
+    "url": "https://github.com/my-tld/mytld-engine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/my-tld/mytld-engine.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "slxca",
+    "url": "https://github.com/slxca"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./domain": {
+      "types": "./dist/core/domain.d.ts",
+      "import": "./dist/core/domain.js"
+    },
+    "./tlds": {
+      "types": "./dist/core/tlds.d.ts",
+      "import": "./dist/core/tlds.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test test/",
+    "smoke": "pnpm build && node scripts/smoke.mjs",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm typecheck && node --test test/"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@12.18.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
