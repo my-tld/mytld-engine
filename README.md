@@ -14,6 +14,8 @@ npm install @mytld/engine
 
 Node.js ≥ 20.3. ESM only.
 
+> Using AI tools? [@mytld/mcp](https://github.com/my-tld/mytld-mcp) puts this engine into Claude, Cursor and any MCP client.
+
 ## Usage
 
 ```ts
